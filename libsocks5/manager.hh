@@ -1,20 +1,19 @@
-#ifndef MANAGER_H_
-#define MANAGER_H_
+#ifndef ABSTRACT_MANAGER_H_
+#define ABSTRACT_MANAGER_H_
 
+#include "socket.hh"
 #include "tcp-socket.hh"
 
 namespace s5 {
-class Manager {
+class AbstractManager {
  public:
   static void
-  Launch(TcpSocket* socket);
+  Handler(AbstractManager* handler);
+  virtual ~AbstractManager() = default;
 
-  explicit Manager(TcpSocket* socket);
-  virtual ~Manager();
-
- private:
-  TcpSocket* client;
+  virtual void
+  Execute() = 0;
 };
 } // ns s5
 
-#endif // MANAGER_H_
+#endif // ABSTRACT_MANAGER_H_

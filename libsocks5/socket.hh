@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include <boost/fiber/all.hpp>
+#include <glog/logging.h>
 
 
 namespace s5 {
@@ -42,16 +43,34 @@ class AbstractScoper {
 class AbstractSocket {
  public:
   AbstractSocket(Reactor* reactor);
+  virtual ~AbstractSocket() = default;
+
+  template <typename Struct>
+  void
+  Recv(Struct* s)
+  {
+    CHECK_EQ(Recv((std::uint8_t*)s, sizeof(Struct)), sizeof(Struct));
+  }
 
   std::size_t
-  Recv(std::uint8_t* data, std::size_t length);
+  Recv(std::uint8_t* data, std::size_t length, bool require_all=true);
+
+  template <typename Struct>
+  void
+  Send(const Struct* s)
+  {
+    CHECK_EQ(Send((const std::uint8_t*)s, sizeof(Struct)), sizeof(Struct));
+  }
 
   std::size_t
-  Send(const std::uint8_t* data, std::size_t length);
+  Send(const std::uint8_t* data, std::size_t length, bool require_all=true);
 
- protected:
+  // FIXME, make protected
   Reactor*
   GetReactor();
+
+ protected:
+
 
   /// {
   /// These methods must be overloaded by the implementing socket type.

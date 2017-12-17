@@ -6,6 +6,7 @@
 #include <glog/logging.h>
 
 #include "reactor.hh"
+#include "client-manager.hh"
 
 using namespace s5;
 
@@ -13,7 +14,12 @@ namespace {
 void
 GoRun()
 {
-  std::unique_ptr<Reactor> reactor(new Reactor("127.0.0.1", 5000));
+  std::unique_ptr<Reactor> reactor(
+      new Reactor("127.0.0.1",
+                  5000,
+                  [](AbstractSocket* socket) {
+                    return new ClientManager(socket);
+                }));
   reactor->Run();
 }
 } // ns

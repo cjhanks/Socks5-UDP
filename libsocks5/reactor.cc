@@ -39,11 +39,12 @@ SetNonBlocking(int fd)
 
 // -------------------------------------------------------------------------- //
 
-Reactor::Reactor(std::string ip, int port)
+Reactor::Reactor(std::string ip, int port, Reactor::Generator generator)
   : epoll_id(-1)
   , listener(-1)
+  , generator(generator)
 {
-  ConfigureAcceptSocket(ip, port);
+  gConfigureAcceptSocketTCP(ip, port);
   ConfigureEpoll();
 }
 
@@ -53,11 +54,8 @@ Reactor::Run()
   static std::size_t constexpr MAXEVENTS = 128;
   std::vector<epoll_event> events(MAXEVENTS);
   do {
-    DLOG(INFO) << "Loop";
-
     int n = epoll_wait(epoll_id, &events[0], events.size(), -1);
     for (int i = 0; i < n; ++i) {
-      DLOG(INFO) << "n = " << n;
       epoll_event& ev = events[i];
 
       if (ev.events & EPOLLERR
@@ -66,8 +64,9 @@ Reactor::Run()
           << "TODO: Handle HUP or ERR";
       } else
       if (ev.data.fd == listener) {
-        HandleAccepts();
+        HandleAcceptsTCP();
       } else {
+        LOG(INFO) << "Set waiter";
         auto mutex = (boost::fibers::barrier*) ev.data.ptr;
         mutex->wait();
       }
@@ -81,7 +80,7 @@ Reactor::Run()
 void
 Reactor::RegisterRecvTCP(boost::fibers::barrier* mutex, int fd)
 {
-  DLOG(INFO) << "RegisterRecvTcp(..., " << fd << ")";
+  //DLOG(INFO) << "RegisterRecvTcp(..., " << fd << ")";
   struct epoll_event ev;
   ev.data.ptr = mutex;
   ev.events   = EPOLLIN;
@@ -91,7 +90,7 @@ Reactor::RegisterRecvTCP(boost::fibers::barrier* mutex, int fd)
 void
 Reactor::UnRegisterRecvTCP(int fd)
 {
-  DLOG(INFO) << "UnRegisterRecvTcp(..., " << fd << ")";
+  //DLOG(INFO) << "UnRegisterRecvTcp(..., " << fd << ")";
   struct epoll_event ev;
   ev.events = EPOLLIN;
   PCHECK(0 == epoll_ctl(epoll_id, EPOLL_CTL_DEL, fd, &ev));
@@ -100,7 +99,7 @@ Reactor::UnRegisterRecvTCP(int fd)
 void
 Reactor::RegisterSendTCP(boost::fibers::barrier* mutex, int fd)
 {
-  DLOG(INFO) << "RegisterSendTcp(..., " << fd << ")";
+  //DLOG(INFO) << "RegisterSendTcp(..., " << fd << ")";
   struct epoll_event ev;
   ev.data.ptr = mutex;
   ev.events   = EPOLLOUT;
@@ -110,14 +109,14 @@ Reactor::RegisterSendTCP(boost::fibers::barrier* mutex, int fd)
 void
 Reactor::UnRegisterSendTCP(int fd)
 {
-  DLOG(INFO) << "UnRegisterSend(..., " << fd << ")";
+  //DLOG(INFO) << "UnRegisterSend(..., " << fd << ")";
   struct epoll_event ev;
   ev.events = EPOLLOUT;
   PCHECK(0 == epoll_ctl(epoll_id, EPOLL_CTL_DEL, fd, &ev));
 }
 
 void
-Reactor::ConfigureAcceptSocket(std::string ip, int port)
+Reactor::gConfigureAcceptSocketTCP(std::string ip, int port)
 {
   DCHECK_EQ(listener, -1);
 
@@ -150,16 +149,13 @@ Reactor::ConfigureEpoll()
   event.data.fd = listener;
   event.events  = EPOLLIN;
 
-  LOG(INFO) << "Set event: " << event.data.fd;
-
   PCHECK(0 == epoll_ctl(epoll_id, EPOLL_CTL_ADD, listener, &event));
 }
 
 void
-Reactor::HandleAccepts()
+Reactor::HandleAcceptsTCP()
 {
   do {
-    DLOG(INFO) << "HandleAccepts()";
     struct sockaddr in_addr;
     socklen_t in_len = sizeof(in_addr);
 
@@ -170,11 +166,12 @@ Reactor::HandleAccepts()
       else
         LOG(FATAL)
           << "Failed to accept: " << strerror(errno);
+    } else {
+      SetNonBlocking(fd);
+      AbstractManager* manager = generator(new TcpSocket(fd, this));
+      boost::fibers::fiber f(AbstractManager::Handler, manager);
+      f.detach();
     }
-
-    SetNonBlocking(fd);
-    boost::fibers::fiber f(Manager::Launch, new TcpSocket(fd, this));
-    f.detach();
   } while (true);
 }
 } // ns s5

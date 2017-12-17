@@ -2,6 +2,7 @@
 #define SOCKS5_STRUCTURES_H_
 
 #include <cstdint>
+#include <iostream>
 
 
 namespace s5 { namespace message {
@@ -13,6 +14,9 @@ enum class Version : std::uint8_t {
   SOCKS5 = 0x05,
 };
 
+std::ostream&
+operator<<(std::ostream& ostr, const Version&);
+
 enum class Method : std::uint8_t {
   NO_AUTHENTICATION_REQUIRED = 0x00,
   GSSAPI                     = 0x01,
@@ -22,17 +26,27 @@ enum class Method : std::uint8_t {
   NO_ACCEPTABLE_METHODS      = 0xFF,
 };
 
+std::ostream&
+operator<<(std::ostream& ostr, const Method&);
+
+
 enum class Command : std::uint8_t {
   CONNECT       = 0x01,
   BIND          = 0x02,
   UDP_ASSOCIATE = 0x03,
 };
 
+std::ostream&
+operator<<(std::ostream& ostr, const Command&);
+
 enum class AddressType : std::uint8_t {
   IPV4       = 0x01,
   DOMAINNAME = 0x03,
   IPV6       = 0x04,
 };
+
+std::ostream&
+operator<<(std::ostream& ostr, const AddressType&);
 
 enum class ReplyMessage : std::uint8_t {
   SUCCESS                = 0x00,
@@ -47,6 +61,9 @@ enum class ReplyMessage : std::uint8_t {
   // 0x09 - 0xFF unassigned
 };
 
+std::ostream&
+operator<<(std::ostream& ostr, const ReplyMessage&);
+
 // -------------------------------------------------------------------------- //
 // Structures
 // -------------------------------------------------------------------------- //
@@ -56,7 +73,10 @@ enum class ReplyMessage : std::uint8_t {
 struct ClientHello {
   Version       version;
   std::uint8_t  number_of_methods;
-};
+} __attribute__((packed));
+
+std::ostream&
+operator<<(std::ostream& ostr, const ClientHello&);
 
 
 /// The server responds to the client specifying which method it prefers to use
@@ -64,7 +84,7 @@ struct ClientHello {
 struct ServerSelectMethod {
   Version version;
   Method  method;
-};
+} __attribute__((packed));
 
 /// {
 /// The client would like to request a new connection from the server
@@ -73,48 +93,50 @@ struct ClientRequestHead {
   Command      command;
   std::uint8_t reserve;
   AddressType  address_type;
-};
+} __attribute__((packed));
+
+std::ostream&
+operator<<(std::ostream& ostr, const ClientRequestHead&);
 
 /// If: address = IPV4
 struct ClientRequestBodyIPV4 {
   std::uint32_t ipv4;
-};
+} __attribute__((packed));
 
 /// If: address = IPV6
 struct ClientRequestBodyIPV6 {
   std::uint64_t ipv6_0;
   std::uint64_t ipv6_1;
-};
+} __attribute__((packed));
 
 /// If: address = DOMAINNAME
 /// Additionally, there are `number_of_octets_which_follow` bytes which will
 /// follow this structure.
-struct ClientRequestBodyDomainName{
+struct ClientRequestBodyDomainName {
   std::uint8_t number_of_octets_which_follow;
-};
+} __attribute__((packed));
 
 struct ClientRequestTail {
   std::uint16_t port;
-};
+} __attribute__((packed));
+
+std::ostream&
+operator<<(std::ostream& ostr, const ClientRequestTail&);
 /// }
 
 /// {
-struct ServerResponseHead {
-  Version      version;
-  ReplyMessage reply;
-  std::uint8_t reserve;
-  AddressType  address_type;
-};
-
-struct ServerResponseBodyIPV4 : public ClientRequestBodyIPV4 {};
-struct ServerResponseBodyIPV6 : public ClientRequestBodyIPV6 {};
-struct ServerResponseBodyDomainName : public ClientRequestBodyDomainName {};
-struct ServerResponseBodyIPV4 : public ClientRequestBodyIPV4 {};
-
-struct ServerResponseTail {
+struct ServerResponse {
+  Version       version;
+  ReplyMessage  reply;
+  std::uint8_t  reserve;
+  AddressType   address_type;
+  std::uint32_t address;
   std::uint16_t port;
-};
-/// }
+} __attribute__((packed));
 
+std::ostream&
+operator<<(std::ostream& ostr, const ServerResponse&);
 } // ns message
 } // ns s5
+
+#endif // SOCKS5_STRUCTURES_H_

@@ -9,8 +9,8 @@
 
 namespace s5 {
 AbstractScoper::AbstractScoper(Reactor* reactor)
-  : reactor(reactor)
-  , mutex(1)
+  : mutex(2)
+  , reactor(reactor)
 {}
 
 void
@@ -39,7 +39,7 @@ AbstractSocket::GetReactor()
 }
 
 std::size_t
-AbstractSocket::Recv(std::uint8_t* data, std::size_t length)
+AbstractSocket::Recv(std::uint8_t* data, std::size_t length, bool require_all)
 {
   std::unique_ptr<AbstractScoper> scoper(NewRecvScoper());
 
@@ -50,7 +50,10 @@ AbstractSocket::Recv(std::uint8_t* data, std::size_t length)
     ssize_t rc = ImplRecv(data + bytes_read, length - bytes_read);
     if (rc < 0) {
       if (rc == EAGAIN || rc == EWOULDBLOCK) {
-        continue;
+        if (!require_all)
+            break;
+        else
+            continue;
       } else {
         LOG(WARNING)
             << "Failed to receive: " << rc << " (" << strerror(rc) << ")";
@@ -61,11 +64,14 @@ AbstractSocket::Recv(std::uint8_t* data, std::size_t length)
     }
   }
 
+  if (bytes_read == 0)
+    throw IOException("0");
+
   return bytes_read;
 }
 
 std::size_t
-AbstractSocket::Send(const std::uint8_t* data, std::size_t length)
+AbstractSocket::Send(const std::uint8_t* data, std::size_t length, bool require_all)
 {
   std::unique_ptr<AbstractScoper> scoper(NewSendScoper());
 
@@ -76,7 +82,10 @@ AbstractSocket::Send(const std::uint8_t* data, std::size_t length)
     ssize_t rc = ImplSend(data + bytes_sent, length - bytes_sent);
     if (rc < 0) {
       if (rc == EAGAIN || rc == EWOULDBLOCK) {
-        continue;
+        if (!require_all)
+            break;
+        else
+            continue;
       } else {
         LOG(WARNING)
             << "Failed to send : " << rc << " (" << strerror(rc) << ")";
@@ -86,6 +95,9 @@ AbstractSocket::Send(const std::uint8_t* data, std::size_t length)
       bytes_sent += rc;
     }
   }
+
+  if (bytes_sent == 0)
+    throw IOException("0");
 
   return bytes_sent;
 }

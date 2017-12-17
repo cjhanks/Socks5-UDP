@@ -5,27 +5,14 @@
 
 namespace s5 {
 void
-Manager::Launch(TcpSocket* socket)
+AbstractManager::Handler(AbstractManager* handler_)
 {
-  std::unique_ptr<TcpSocket> client(socket);
-
-  while (true) {
-    char c;
-    try {
-      client->Recv((std::uint8_t*)&c, sizeof(c));
-      LOG(INFO) << c;
-    } catch (const IOException& e) {
-      break;
-    }
+  std::unique_ptr<AbstractManager> handler(handler_);
+  try {
+    handler->Execute();
+  } catch (const IOException& err) {
+    LOG(WARNING)
+        << "Unhandled IOError: " << err.what();
   }
-}
-
-Manager::Manager(TcpSocket* socket)
-  : client(socket)
-{}
-
-Manager::~Manager()
-{
-  delete client;
 }
 } // ns s5

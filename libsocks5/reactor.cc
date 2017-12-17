@@ -22,23 +22,6 @@
 
 
 namespace s5 {
-namespace {
-// -------------------------------------------------------------------------- //
-void
-SetNonBlocking(int fd)
-{
-  int flags = fcntl(fd, F_GETFL, 0);
-  PCHECK(flags >= 0);
-
-  flags = (flags | O_NONBLOCK);
-  PCHECK(0 == fcntl(fd, F_SETFL, flags));
-}
-
-} // ns
-
-
-// -------------------------------------------------------------------------- //
-
 Reactor::Reactor(std::string ip, int port, Reactor::Generator generator)
   : epoll_id(-1)
   , listener(-1)
@@ -66,9 +49,8 @@ Reactor::Run()
       if (ev.data.fd == listener) {
         HandleAcceptsTCP();
       } else {
-        LOG(INFO) << "Set waiter";
-        auto mutex = (boost::fibers::barrier*) ev.data.ptr;
-        mutex->wait();
+        //auto mutex = (boost::fibers::barrier*) ev.data.ptr;
+        //mutex->wait();
       }
 
       // allow fibers to execute.
@@ -80,7 +62,7 @@ Reactor::Run()
 void
 Reactor::RegisterRecvTCP(boost::fibers::barrier* mutex, int fd)
 {
-  //DLOG(INFO) << "RegisterRecvTcp(..., " << fd << ")";
+  DLOG(INFO) << "RegisterRecvTcp(..., " << fd << ")";
   struct epoll_event ev;
   ev.data.ptr = mutex;
   ev.events   = EPOLLIN;
@@ -90,7 +72,7 @@ Reactor::RegisterRecvTCP(boost::fibers::barrier* mutex, int fd)
 void
 Reactor::UnRegisterRecvTCP(int fd)
 {
-  //DLOG(INFO) << "UnRegisterRecvTcp(..., " << fd << ")";
+  DLOG(INFO) << "UnRegisterRecvTcp(..., " << fd << ")";
   struct epoll_event ev;
   ev.events = EPOLLIN;
   PCHECK(0 == epoll_ctl(epoll_id, EPOLL_CTL_DEL, fd, &ev));
@@ -99,7 +81,7 @@ Reactor::UnRegisterRecvTCP(int fd)
 void
 Reactor::RegisterSendTCP(boost::fibers::barrier* mutex, int fd)
 {
-  //DLOG(INFO) << "RegisterSendTcp(..., " << fd << ")";
+  DLOG(INFO) << "RegisterSendTcp(..., " << fd << ")";
   struct epoll_event ev;
   ev.data.ptr = mutex;
   ev.events   = EPOLLOUT;
@@ -109,7 +91,7 @@ Reactor::RegisterSendTCP(boost::fibers::barrier* mutex, int fd)
 void
 Reactor::UnRegisterSendTCP(int fd)
 {
-  //DLOG(INFO) << "UnRegisterSend(..., " << fd << ")";
+  DLOG(INFO) << "UnRegisterSend(..., " << fd << ")";
   struct epoll_event ev;
   ev.events = EPOLLOUT;
   PCHECK(0 == epoll_ctl(epoll_id, EPOLL_CTL_DEL, fd, &ev));

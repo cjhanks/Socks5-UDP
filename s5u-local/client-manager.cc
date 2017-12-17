@@ -123,7 +123,7 @@ ClientManager::HandleDNS()
   struct addrinfo* res;
 
   int rc = getaddrinfo(url.c_str(), NULL, &hints, &res);
-  PCHECK(0 == rc)
+  CHECK_EQ(0, rc)
       << "Rc = " << rc;
 
   for (auto p = res; p != nullptr; p = p->ai_next) {
@@ -150,6 +150,7 @@ ClientManager::HandleDNS()
 
   int fd = socket(AF_INET, SOCK_STREAM, 0);
   PCHECK(0 == connect(fd, (struct sockaddr*) ipv4, sizeof(*ipv4)));
+  SetNonBlocking(fd);
   remote.reset(new TcpSocket(fd, client->GetReactor()));
 }
 
@@ -159,19 +160,15 @@ ClientManager::SpawnProxy()
   CHECK(client);
   CHECK(remote);
 
-  LOG(INFO) << "Launch fiber 0";
   boost::fibers::fiber(
   [](std::shared_ptr<AbstractSocket> client,
      std::shared_ptr<AbstractSocket> remote) {
-    LOG(INFO) << "IN fiber 0";
-    std::uint8_t buffer[1024];
+    std::uint8_t buffer[1];
     do {
-      DLOG(INFO) << "F0";
       CHECK(client);
       CHECK(remote);
       try {
         std::size_t rc = remote->Recv(buffer, sizeof(buffer), false);
-        LOG(INFO) << "R -> C: " << rc;
         client->Send(buffer, rc, true);
       } catch (...) {
         LOG(INFO) << "Exit 0";
@@ -182,19 +179,15 @@ ClientManager::SpawnProxy()
   client,
   remote).detach();
 
-  LOG(INFO) << "Launch fiber 1";
   boost::fibers::fiber(
   [](std::shared_ptr<AbstractSocket> client,
      std::shared_ptr<AbstractSocket> remote) {
-    LOG(INFO) << "IN fiber 1";
-    std::uint8_t buffer[1024];
+    std::uint8_t buffer[1];
     do {
-      DLOG(INFO) << "F1";
       CHECK(client);
       CHECK(remote);
       try {
         std::size_t rc = client->Recv(buffer, sizeof(buffer), false);
-        LOG(INFO) << "C -> R: " << rc;
         remote->Send(buffer, rc, true);
       } catch (...) {
         LOG(INFO) << "Exit 1";

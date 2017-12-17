@@ -7,6 +7,9 @@
 namespace s5 {
 class Reactor;
 
+void
+SetNonBlocking(int fd);
+
 class TcpRecvScoper : public AbstractScoper {
  public:
   TcpRecvScoper(int fd, Reactor* reactor);
@@ -44,7 +47,8 @@ class TcpSocket : public AbstractSocket {
   NewSendScoper();
 
  private:
-  int fd;
+  int fd_recv;
+  int fd_send;
 };
 } // ns s5
 

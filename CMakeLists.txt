@@ -28,7 +28,7 @@ string(CONCAT CMAKE_CXX_FLAGS
       "-Wdouble-promotion "
       "-Wformat=2 "
       "-pthread "
-      "-std=c++17 "
+      "-std=c++14 "
       "-mtune=native "
       "-march=native "
       )
@@ -40,10 +40,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O1 -g -Wno-error=unused-parameter -Wno-error=unused-
 # ------------------------------------------------------------------------------------------ #
 # {
 # REQUIRED
-find_package(Boost COMPONENTS filesystem iostreams REQUIRED )
+find_package(Boost COMPONENTS filesystem iostreams fiber REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 list(APPEND COMMON_LIBRARIES ${Boost_LIBRARIES})
+add_definitions(-DBOOST_NO_CXX11_APPLY)
 
 find_package(GFlags REQUIRED)
 include_directories(${GFLAGS_INCLUDE_DIRS})
@@ -65,4 +66,9 @@ list(APPEND COMMON_LIBRARIES ${PROTOBUF_LIBRARIES})
 # ------------------------------------------------------------------------------------------ #
 
 add_subdirectory(libsocks5)
+list(APPEND COMMON_LIBRARIES socks5)
+include_directories(./libsocks5)
+
+add_subdirectory(s5u-local)
+
 

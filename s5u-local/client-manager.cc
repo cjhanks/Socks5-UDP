@@ -32,32 +32,40 @@ ClientManager::~ClientManager()
 void
 ClientManager::Negotiate(AbstractSocket* client_)
 {
-  client = client_;
-  CHECK_NOTNULL(client);
+  try {
+    client = client_;
+    CHECK_NOTNULL(client);
 
-  NegotiateClientMethod();
+    NegotiateClientMethod();
 
-  ClientRequestHead request;
-  client->Recv(&request);
-  DLOG(INFO) << request;
+    ClientRequestHead request;
+    client->Recv(&request);
+    DLOG(INFO) << request;
 
-  switch (request.address_type) {
-    case AddressType::IPV4:
-      HandleIPV4();
-      break;
-    case AddressType::IPV6:
-      HandleIPV6();
-      break;
-    case AddressType::DOMAINNAME:
-      HandleDNS();
-      break;
-    default:
-      LOG(WARNING)
-        << "Invalid request";
-      return;
+    switch (request.address_type) {
+      case AddressType::IPV4:
+        HandleIPV4();
+        break;
+      case AddressType::IPV6:
+        HandleIPV6();
+        break;
+      case AddressType::DOMAINNAME:
+        HandleDNS();
+        break;
+      default:
+        LOG(WARNING)
+          << "Invalid request";
+        return;
+    }
+    SpawnProxy();
+    LOG(INFO) << "Proxy over";
+  } catch (const IOException& err) {
+    LOG(WARNING) << err.what();
+    SendFailureResponse();
+  } catch (const GeneralFailure& err) {
+    LOG(WARNING) << err.what();
+    SendFailureResponse();
   }
-
-  SpawnProxy();
 }
 
 void
@@ -132,8 +140,8 @@ ClientManager::HandleDNS()
   struct addrinfo* res;
 
   int rc = getaddrinfo(url.c_str(), NULL, &hints, &res);
-  CHECK_EQ(0, rc)
-      << "Rc = " << rc;
+  if (0 != rc)
+    throw GeneralFailure("FAILED TO DNS LOOKUP");
 
   for (auto p = res; p != nullptr; p = p->ai_next) {
     if (p->ai_family != AF_INET)
@@ -156,7 +164,8 @@ ClientManager::HandleDNS()
   client->Send(&response);
 
   int fd = socket(AF_INET, SOCK_STREAM, 0);
-  PCHECK(0 == connect(fd, (struct sockaddr*) ipv4, sizeof(*ipv4)));
+  if (0 != connect(fd, (struct sockaddr*) ipv4, sizeof(*ipv4)))
+    throw GeneralFailure("FAILED TO CONNECT");
 
   auto s = new TcpSocket(fd);
   remote = s;
@@ -172,7 +181,7 @@ ClientManager::SpawnProxy()
 
   boost::fibers::fiber RtoC(
   [](AbstractSocket* client, AbstractSocket* remote) {
-    std::uint8_t buffer[1024];
+    std::uint8_t buffer[4096];
     do {
       CHECK(client);
       CHECK(remote);
@@ -187,13 +196,17 @@ ClientManager::SpawnProxy()
         break;
       }
     } while (true);
+
+    LOG(INFO) << "EXITED";
+    client->SetDeadTriggered();
+    remote->SetDeadTriggered();
   },
   client,
   remote);
 
   boost::fibers::fiber CtoR(
   [](AbstractSocket* client, AbstractSocket* remote) {
-    std::uint8_t buffer[1024];
+    std::uint8_t buffer[4096];
     do {
       CHECK(client);
       CHECK(remote);
@@ -208,11 +221,30 @@ ClientManager::SpawnProxy()
         break;
       }
     } while (true);
+
+    LOG(INFO) << "EXITED";
+    client->SetDeadTriggered();
+    remote->SetDeadTriggered();
   },
   client,
   remote);
 
   RtoC.join();
   CtoR.join();
+
+  LOG(INFO) << "CLOSED";
+}
+
+void
+ClientManager::SendFailureResponse()
+{
+  ServerResponse response;
+  response.version      = Version::SOCKS5;
+  response.reply        = ReplyMessage::GENERAL_FAILURE;
+  response.reserve      = 0;
+  response.address_type = AddressType::IPV4;
+  response.address      = 0;
+  response.port         = 0;
+  client->Send(&response);
 }
 } // ns

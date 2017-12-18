@@ -58,11 +58,23 @@ Reactor::EventLoop()
 
       if (ev.events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
         if (handle->type == Handle::SOCKET) {
-          handle->u.socket->SetDeadTriggered(this);
+          handle->u.socket->SetDeadTriggered();
           delete handle;
-        } else {
+        } else
+        if (handle->type == Handle::LISTENER) {
+          if (ev.events & EPOLLERR)
+            LOG(WARNING) << "ACCEPT: EPOLLERR";
+          if (ev.events & EPOLLHUP)
+            LOG(WARNING) << "ACCEPT: EPOLLHUP";
+          if (ev.events & EPOLLRDHUP)
+            LOG(WARNING) << "ACCEPT: EPOLLRDHUP";
+
           LOG(FATAL) << "Failed accepting socket";
+        } else {
+           LOG(WARNING)
+               << "Unknown event";
         }
+
       } else {
         if (handle->type == Handle::SOCKET) {
           if (ev.events & EPOLLIN)

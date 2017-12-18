@@ -18,6 +18,7 @@ AbstractSocket::Recv(std::uint8_t* data, std::size_t length, bool require_all)
     recv_condition.wait(guard, [&]() { return dead || recv_triggered; });
     if (dead)
       return 0;
+
     ssize_t rc = ImplRecv(data + bytes_read, length - bytes_read);
     if (rc < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -30,6 +31,9 @@ AbstractSocket::Recv(std::uint8_t* data, std::size_t length, bool require_all)
                                              << ":"  << length << ") "
                                              << strerror(errno);
       }
+    } else
+    if (rc == 0) {
+      return 0;
     } else {
       bytes_read += rc;
     }
@@ -54,9 +58,10 @@ AbstractSocket::Send(const std::uint8_t* data, std::size_t length, bool require_
   std::size_t bytes_sent = 0;
   while (bytes_sent != length) {
     send_condition.wait(guard, [&]() { return dead || send_triggered; });
-    ssize_t rc = ImplSend(data + bytes_sent, length - bytes_sent);
     if (dead)
       return 0;
+
+    ssize_t rc = ImplSend(data + bytes_sent, length - bytes_sent);
     if (rc < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         send_triggered = false;
@@ -66,6 +71,9 @@ AbstractSocket::Send(const std::uint8_t* data, std::size_t length, bool require_
         LOG(FATAL)
             << "Failed to sent data: " << rc;
       }
+    } else
+    if (rc == 0) {
+      return 0;
     } else {
       bytes_sent += rc;
     }
@@ -84,12 +92,10 @@ AbstractSocket::SetSendTriggered()
 }
 
 void
-AbstractSocket::SetDeadTriggered(Reactor* reactor)
+AbstractSocket::SetDeadTriggered()
 {
   dead = true;
   SetSendTriggered();
   SetRecvTriggered();
-
-  ImplSetDeadTriggered(reactor);
 }
 } // ns s5

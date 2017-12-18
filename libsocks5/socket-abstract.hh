@@ -24,9 +24,9 @@ class AbstractSocket {
 
   /// {
   template <typename Struct>
-  void
+  std::size_t
   Recv(Struct* s)
-  { CHECK_EQ(Recv((std::uint8_t*)s, sizeof(Struct)), sizeof(Struct)); }
+  { return Recv((std::uint8_t*)s, sizeof(Struct)), sizeof(Struct); }
 
   std::size_t
   Recv(std::uint8_t* data, std::size_t length, bool require_all=true);
@@ -37,9 +37,9 @@ class AbstractSocket {
 
   /// {
   template <typename Struct>
-  void
+  std::size_t
   Send(const Struct* s)
-  { CHECK_EQ(Send((const std::uint8_t*)s, sizeof(Struct)), sizeof(Struct)); }
+  { return Send((const std::uint8_t*)s, sizeof(Struct)), sizeof(Struct); }
 
   std::size_t
   Send(const std::uint8_t* data, std::size_t length, bool require_all=true);
@@ -49,7 +49,7 @@ class AbstractSocket {
   /// }
 
   void
-  SetDeadTriggered(Reactor* reactor);
+  SetDeadTriggered();
 
   virtual void
   Register(Reactor* reactor) = 0;

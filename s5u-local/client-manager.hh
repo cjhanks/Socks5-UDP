@@ -5,10 +5,16 @@
 #include "socket-abstract.hh"
 
 #include <memory>
+#include <stdexcept>
 
 
 namespace s5 {
 class Reactor;
+
+class GeneralFailure : public std::runtime_error {
+ public:
+  using std::runtime_error::runtime_error;
+};
 
 class ClientManager : public AbstractHandler {
  public:
@@ -36,6 +42,9 @@ class ClientManager : public AbstractHandler {
 
   void
   SpawnProxy();
+
+  void
+  SendFailureResponse();
 };
 } // ns s5
 

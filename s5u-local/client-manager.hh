@@ -1,24 +1,26 @@
 #ifndef MANAGER_H_
 #define MANAGER_H_
 
-#include "manager.hh"
-#include "socket.hh"
+#include "handler-abstract.hh"
+#include "socket-abstract.hh"
 
 #include <memory>
 
 
 namespace s5 {
-class ClientManager : public AbstractManager {
+class Reactor;
+
+class ClientManager : public AbstractHandler {
  public:
-  explicit ClientManager(AbstractSocket* socket);
+  ClientManager(Reactor* reactor);
   virtual ~ClientManager();
 
   virtual void
-  Execute();
+  Negotiate(AbstractSocket* socket);
 
  private:
-  std::shared_ptr<AbstractSocket> client;
-  std::shared_ptr<AbstractSocket> remote;
+  AbstractSocket* client;
+  AbstractSocket* remote;
 
   void
   NegotiateClientMethod();

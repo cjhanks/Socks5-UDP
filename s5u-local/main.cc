@@ -7,6 +7,8 @@
 
 #include "reactor.hh"
 #include "client-manager.hh"
+#include "socket-tcp.hh"
+
 
 using namespace s5;
 
@@ -15,12 +17,11 @@ void
 GoRun()
 {
   std::unique_ptr<Reactor> reactor(
-      new Reactor("127.0.0.1",
-                  5000,
-                  [](AbstractSocket* socket) {
-                    return new ClientManager(socket);
-                }));
-  reactor->Run();
+      new Reactor(
+        [&]() { return new ClientManager(reactor.get()); }));
+
+  reactor->AddListener(new TcpListener("127.0.0.1", 5000));
+  reactor->EventLoop();
 }
 } // ns
 
@@ -28,9 +29,10 @@ GoRun()
 int
 main(int argc, char* argv[])
 {
-  std::cerr << "OK\n";
+  google::InstallFailureSignalHandler();
   boost::fibers::fiber run_loop(GoRun);
   run_loop.join();
 
   LOG(INFO) << "Done";
+  return 0;
 }

@@ -1,4 +1,4 @@
-#include "structures.hh"
+#include "socks5.hh"
 
 
 namespace s5 { namespace message {

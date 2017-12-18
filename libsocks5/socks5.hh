@@ -1,3 +1,8 @@
+/// @file socks5.hh
+///
+/// Set of enumerations and structures implementing the SOCKS5 protocol
+/// messages.
+///
 #ifndef SOCKS5_STRUCTURES_H_
 #define SOCKS5_STRUCTURES_H_
 

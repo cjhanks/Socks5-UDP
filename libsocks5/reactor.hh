@@ -1,57 +1,46 @@
-#ifndef SOCKS5_REACTOR_H_
-#define SOCKS5_REACTOR_H_
+#ifndef REACTOR_HH_
+#define REACTOR_HH_
 
 #include <functional>
-#include <string>
 
-#include <boost/fiber/all.hpp>
-
-#include "socket.hh"
+#include "socket-abstract.hh"
+#include "handler-abstract.hh"
 
 
 namespace s5 {
-class AbstractManager;
+class TcpListener;
+class TcpSocket;
+
 
 class Reactor {
  public:
-  using Generator = std::function<AbstractManager*(AbstractSocket*)>;
+  using Generator = std::function<AbstractHandler*()>;
+  Reactor(Generator generator);
 
-  Reactor(std::string ip, int port, Generator generator);
-
-  /// Runs forever
   void
-  Run();
+  EventLoop();
 
   /// {
-  /// TCP epoll registering and unregistering.
   void
-  RegisterRecvTCP(boost::fibers::barrier* mutex, int fd);
+  AddListener(TcpListener* listener);
 
   void
-  UnRegisterRecvTCP(int fd);
+  Register(TcpSocket* socket);
 
   void
-  RegisterSendTCP(boost::fibers::barrier* mutex, int fd);
-
-  void
-  UnRegisterSendTCP(int fd);
+  Unregister(TcpSocket* socket);
   /// }
 
  private:
   int epoll_id;
-  int listener;
   Generator generator;
 
   void
-  gConfigureAcceptSocketTCP(std::string ip, int port);
+  InitializeEpoll();
 
   void
-  ConfigureEpoll();
-
-  void
-  HandleAcceptsTCP();
+  HandleAccepts(AbstractListener* listener);
 };
-
 } // ns s5
 
-#endif // SOCKS5_REACTOR_H_
+#endif // REACTOR_HH_

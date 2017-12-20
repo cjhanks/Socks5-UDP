@@ -8,6 +8,7 @@
 #include <boost/fiber/all.hpp>
 #include <glog/logging.h>
 
+#include "handler-abstract.hh"
 #include "socket-tcp.hh"
 
 
@@ -50,7 +51,9 @@ Reactor::EventLoop()
   std::vector<epoll_event> events(MAXEVENTS);
 
   do {
-    int n = epoll_wait(epoll_id, &events[0], events.size(), 1);
+    DLOG(INFO) << "Loop";
+    int n = epoll_wait(epoll_id, &events[0], events.size(), -1);
+
     for (int i = 0; i < n; ++i) {
       epoll_event& ev = events[i];
       auto handle = (Handle*)ev.data.ptr;
@@ -74,14 +77,12 @@ Reactor::EventLoop()
            LOG(WARNING)
                << "Unknown event";
         }
-
       } else {
         if (handle->type == Handle::SOCKET) {
           if (ev.events & EPOLLIN)
             handle->u.socket->SetRecvTriggered();
           if (ev.events & EPOLLOUT)
             handle->u.socket->SetSendTriggered();
-
         } else {
           HandleAccepts(handle->u.listener);
         }
@@ -115,13 +116,10 @@ Reactor::InitializeEpoll()
 void
 Reactor::HandleAccepts(AbstractListener* listener)
 {
-  while (AbstractSocket* client = listener->Accept()) {
-    client->Register(this);
+  DLOG(INFO) << "HandleAccepts(...)";
+  while (AbstractSocket* client = listener->Accept())
     boost::fibers::fiber(
-      &AbstractHandler::NegotiateLoop,
-      generator(),
-      client).detach();
-  }
+      &AbstractHandler::NegotiateLoop, generator(client)).detach();
 }
 
 void

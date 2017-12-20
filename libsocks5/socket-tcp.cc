@@ -24,6 +24,10 @@ TcpSocket::SetNonBlocking(int fd)
   PCHECK(0 == fcntl(fd, F_SETFL, flags));
 }
 
+TcpSocket::TcpSocket()
+  : fd(-1)
+{}
+
 TcpSocket::TcpSocket(int fd)
   : fd(fd)
 {
@@ -36,6 +40,28 @@ TcpSocket::~TcpSocket()
   DLOG(INFO) << "~TcpSocket()";
   if (fd >= 0)
     PCHECK(0 == ::close(fd));
+}
+
+bool
+TcpSocket::Connect(const std::string& host, int port)
+{
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+
+  addr.sin_family      = AF_INET;
+  addr.sin_port        = htons(port);
+
+  if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) < 0)
+    return false;
+
+  fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0)
+    return false;
+
+  if (connect(fd, (struct sockaddr*) &addr, sizeof(addr)) < 0)
+    return false;
+
+  return true;
 }
 
 ssize_t
@@ -57,9 +83,7 @@ TcpSocket::Unregister(Reactor* reactor)
 
 void
 TcpSocket::ImplSetDeadTriggered(Reactor* reactor)
-{
-  reactor->Unregister(this);
-}
+{ reactor->Unregister(this); }
 
 // -------------------------------------------------------------------------- //
 
@@ -76,7 +100,8 @@ TcpListener::TcpListener(std::string ip, int port)
 
   static int True = 1;
   PCHECK(0 == ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &True, sizeof(True)));
-  PCHECK(0 == ::bind(fd, (struct sockaddr*)&server, sizeof(server)));
+  PCHECK(0 == ::bind(fd, (struct sockaddr*)&server, sizeof(server)))
+      << ip << ":" << port;
   PCHECK(0 == ::listen(fd, SOMAXCONN));
 
   TcpSocket::SetNonBlocking(fd);

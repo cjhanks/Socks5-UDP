@@ -14,7 +14,7 @@ class TcpSocket;
 
 class Reactor {
  public:
-  using Generator = std::function<AbstractHandler*()>;
+  using Generator = std::function<AbstractHandler*(AbstractSocket*)>;
   Reactor(Generator generator);
 
   void

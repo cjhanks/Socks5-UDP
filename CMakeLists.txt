@@ -7,7 +7,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 # Configure build paths
 # ------------------------------------------------------------------------------------------ #
 
-set(dir ${CMAKE_CURRENT_SOURCE_DIR}/build/${CMAKE_BUILD_TYPE}/)
+set(dir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/)
 set(EXECUTABLE_OUTPUT_PATH ${dir} CACHE PATH "Build directory" FORCE)
 set(LIBRARY_OUTPUT_PATH ${dir} CACHE PATH "Build directory" FORCE)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${dir})
@@ -68,7 +68,9 @@ list(APPEND COMMON_LIBRARIES ${PROTOBUF_LIBRARIES})
 add_subdirectory(libsocks5)
 list(APPEND COMMON_LIBRARIES socks5)
 include_directories(./libsocks5)
+include_directories(${CMAKE_BUILD_DIRECTORY}/libsocks5)
 
-add_subdirectory(s5u-local)
+add_subdirectory(app/s5u-client)
+add_subdirectory(app/s5u-remote)
 
 

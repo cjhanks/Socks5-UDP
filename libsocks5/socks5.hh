@@ -53,6 +53,7 @@ enum class AddressType : std::uint8_t {
 std::ostream&
 operator<<(std::ostream& ostr, const AddressType&);
 
+
 enum class ReplyMessage : std::uint8_t {
   SUCCESS                = 0x00,
   GENERAL_FAILURE        = 0x01,

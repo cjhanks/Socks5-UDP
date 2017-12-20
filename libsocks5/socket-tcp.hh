@@ -13,8 +13,12 @@ class TcpSocket : public AbstractSocket {
   static void
   SetNonBlocking(int fd);
 
+  TcpSocket();
   explicit TcpSocket(int fd);
   virtual ~TcpSocket();
+
+  bool
+  Connect(const std::string& host, int port);
 
   virtual void
   Register(Reactor* reactor);

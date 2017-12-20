@@ -28,6 +28,10 @@ class AbstractSocket {
   Recv(Struct* s)
   { return Recv((std::uint8_t*)s, sizeof(Struct)), sizeof(Struct); }
 
+  void
+  Recv(std::string& data)
+  { Recv((std::uint8_t*)&data[0], data.size()); }
+
   std::size_t
   Recv(std::uint8_t* data, std::size_t length, bool require_all=true);
 
@@ -40,6 +44,10 @@ class AbstractSocket {
   std::size_t
   Send(const Struct* s)
   { return Send((const std::uint8_t*)s, sizeof(Struct)), sizeof(Struct); }
+
+  void
+  Send(const std::string& data)
+  { Send((const std::uint8_t*)&data[0], data.size()); }
 
   std::size_t
   Send(const std::uint8_t* data, std::size_t length, bool require_all=true);

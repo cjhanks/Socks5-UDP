@@ -7,6 +7,8 @@
 #include <boost/fiber/all.hpp>
 #include <glog/logging.h>
 
+#include "exception.hh"
+
 
 namespace s5 {
 class Reactor;
@@ -22,15 +24,24 @@ class AbstractSocket {
   AbstractSocket();
   virtual ~AbstractSocket() = default;
 
+  virtual void
+  Connect(const std::string& host, int port) = 0;
+
   /// {
   template <typename Struct>
-  std::size_t
+  void
   Recv(Struct* s)
-  { return Recv((std::uint8_t*)s, sizeof(Struct)), sizeof(Struct); }
+  {
+    if (Recv((std::uint8_t*)s, sizeof(Struct)), sizeof(Struct) != sizeof(Struct))
+      throw SocketException("Invalid receive length");
+  }
 
   void
   Recv(std::string& data)
-  { Recv((std::uint8_t*)&data[0], data.size()); }
+  {
+    if (Recv((std::uint8_t*)&data[0], data.size()) != data.size())
+      throw SocketException("Invalid receive length");
+  }
 
   std::size_t
   Recv(std::uint8_t* data, std::size_t length, bool require_all=true);
@@ -41,13 +52,19 @@ class AbstractSocket {
 
   /// {
   template <typename Struct>
-  std::size_t
+  void
   Send(const Struct* s)
-  { return Send((const std::uint8_t*)s, sizeof(Struct)), sizeof(Struct); }
+  {
+    if (Send((const std::uint8_t*)s, sizeof(Struct)), sizeof(Struct) != sizeof(Struct))
+      throw SocketException("Invalid send length");
+  }
 
   void
   Send(const std::string& data)
-  { Send((const std::uint8_t*)&data[0], data.size()); }
+  {
+    if (Send((const std::uint8_t*)&data[0], data.size()) != data.size())
+      throw SocketException("Invalid send length");
+  }
 
   std::size_t
   Send(const std::uint8_t* data, std::size_t length, bool require_all=true);

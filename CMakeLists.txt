@@ -65,10 +65,13 @@ list(APPEND COMMON_LIBRARIES ${PROTOBUF_LIBRARIES})
 # Build
 # ------------------------------------------------------------------------------------------ #
 
-add_subdirectory(libsocks5)
-list(APPEND COMMON_LIBRARIES socks5)
 include_directories(./libsocks5)
 include_directories(${CMAKE_BUILD_DIRECTORY}/libsocks5)
+
+add_subdirectory(libsocks5)
+list(APPEND COMMON_LIBRARIES socks5)
+
+
 
 add_subdirectory(app/s5u-client)
 add_subdirectory(app/s5u-remote)

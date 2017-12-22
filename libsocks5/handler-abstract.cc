@@ -3,6 +3,7 @@
 #include <memory>
 #include <glog/logging.h>
 
+#include "exception.hh"
 #include "reactor.hh"
 
 
@@ -55,7 +56,8 @@ AbstractHandler::SpawnProxy()
         std::size_t rc = remote->Recv(buffer, sizeof(buffer), false);
         if (rc == 0)
           break;
-        if (0 == client->Send(buffer, rc, true))
+
+        if (rc != client->Send(buffer, rc, true))
           break;
       } catch (...) {
         break;
@@ -76,7 +78,8 @@ AbstractHandler::SpawnProxy()
         std::size_t rc = client->Recv(buffer, sizeof(buffer), false);
         if (rc == 0)
           break;
-        if (0 == remote->Send(buffer, rc, true))
+
+        if (rc != remote->Send(buffer, rc, true))
           break;
       } catch (...) {
         break;

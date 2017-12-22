@@ -37,12 +37,11 @@ TcpSocket::TcpSocket(int fd)
 
 TcpSocket::~TcpSocket()
 {
-  DLOG(INFO) << "~TcpSocket()";
   if (fd >= 0)
     PCHECK(0 == ::close(fd));
 }
 
-bool
+void
 TcpSocket::Connect(const std::string& host, int port)
 {
   struct sockaddr_in addr;
@@ -52,25 +51,39 @@ TcpSocket::Connect(const std::string& host, int port)
   addr.sin_port        = htons(port);
 
   if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) < 0)
-    return false;
+    throw SocketException("Failed to map IP address");
 
   fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0)
-    return false;
+    throw SocketException("Failed to create socket");
 
   if (connect(fd, (struct sockaddr*) &addr, sizeof(addr)) < 0)
-    return false;
+    throw SpecificSocketException(wire::HOST_UNREACHABLE);
 
-  return true;
+  SetNonBlocking(fd);
 }
 
 ssize_t
 TcpSocket::ImplRecv(std::uint8_t* data, std::size_t length)
-{ return ::recv(fd, data, length, 0); }
+{
+  DCHECK_GT(length, 0);
+  auto rc = ::recv(fd, data, length, 0);
+  if (rc < 0)
+    return -errno;
+  else
+    return rc;
+}
 
 ssize_t
 TcpSocket::ImplSend(const std::uint8_t* data, std::size_t length)
-{ return ::send(fd, data, length, 0); }
+{
+  DCHECK_GT(length, 0);
+  auto rc = ::send(fd, data, length, 0);
+  if (rc < 0)
+    return -errno;
+  else
+    return rc;
+}
 
 void
 TcpSocket::Register(Reactor* reactor)

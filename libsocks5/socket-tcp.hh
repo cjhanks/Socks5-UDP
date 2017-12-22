@@ -17,7 +17,7 @@ class TcpSocket : public AbstractSocket {
   explicit TcpSocket(int fd);
   virtual ~TcpSocket();
 
-  bool
+  void
   Connect(const std::string& host, int port);
 
   virtual void

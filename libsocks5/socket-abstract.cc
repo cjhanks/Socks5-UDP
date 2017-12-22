@@ -12,28 +12,27 @@ AbstractSocket::AbstractSocket()
 std::size_t
 AbstractSocket::Recv(std::uint8_t* data, std::size_t length, bool require_all)
 {
+  DCHECK_GT(length, 0);
   std::unique_lock<boost::fibers::mutex> guard(recv_mutex);
   std::size_t bytes_read = 0;
   while (bytes_read != length) {
     recv_condition.wait(guard, [&]() { return dead || recv_triggered; });
-    if (dead)
+    if (dead) {
       return 0;
+    }
 
     ssize_t rc = ImplRecv(data + bytes_read, length - bytes_read);
     if (rc < 0) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      if (rc == -EAGAIN || rc == -EWOULDBLOCK) {
         recv_triggered = false;
-        if (!require_all)
+        if (!require_all && bytes_read > 0)
           break;
       } else {
-        LOG(FATAL)
-            << "Failed to read data: " << rc << " (" << bytes_read
-                                             << ":"  << length << ") "
-                                             << strerror(errno);
+        throw SocketException(strerror(-rc));
       }
     } else
     if (rc == 0) {
-      return 0;
+      break;
     } else {
       bytes_read += rc;
     }
@@ -45,8 +44,6 @@ AbstractSocket::Recv(std::uint8_t* data, std::size_t length, bool require_all)
 void
 AbstractSocket::SetRecvTriggered()
 {
-  //DLOG(INFO) << "SetRecvTriggered()";
-  //CHECK(!recv_triggered);
   recv_triggered = true;
   recv_condition.notify_one();
 }
@@ -54,30 +51,32 @@ AbstractSocket::SetRecvTriggered()
 std::size_t
 AbstractSocket::Send(const std::uint8_t* data, std::size_t length, bool require_all)
 {
+  DCHECK_GT(length, 0);
   std::unique_lock<boost::fibers::mutex> guard(send_mutex);
   std::size_t bytes_sent = 0;
   while (bytes_sent != length) {
     send_condition.wait(guard, [&]() { return dead || send_triggered; });
-    if (dead)
+    if (dead) {
       return 0;
+    }
 
     ssize_t rc = ImplSend(data + bytes_sent, length - bytes_sent);
     if (rc < 0) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      if (rc == -EAGAIN || rc == -EWOULDBLOCK) {
         send_triggered = false;
-        if (!require_all)
+        if (!require_all && bytes_sent > 0)
           break;
       } else {
-        LOG(FATAL)
-            << "Failed to sent data: " << rc;
+        throw SocketException(strerror(-rc));
       }
     } else
     if (rc == 0) {
-      return 0;
+      break;
     } else {
       bytes_sent += rc;
     }
   }
+
 
   return bytes_sent;
 }
@@ -85,7 +84,6 @@ AbstractSocket::Send(const std::uint8_t* data, std::size_t length, bool require_
 void
 AbstractSocket::SetSendTriggered()
 {
-  //DLOG(INFO) << "SetSendTriggered()";
   //CHECK(!send_triggered);
   send_triggered = true;
   send_condition.notify_one();

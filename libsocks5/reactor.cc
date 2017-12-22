@@ -51,7 +51,6 @@ Reactor::EventLoop()
   std::vector<epoll_event> events(MAXEVENTS);
 
   do {
-    DLOG(INFO) << "Loop";
     int n = epoll_wait(epoll_id, &events[0], events.size(), -1);
 
     for (int i = 0; i < n; ++i) {

@@ -1,0 +1,59 @@
+// vim: ts=2 sw=2 et ai tw=80
+////////////////////////////////////////////////////////////////////////////////
+// C - "Client"
+// R - "Remote"
+//
+// C --> R : Uint32 + Request
+// R <-- C : Uint32 + Response
+//
+////////////////////////////////////////////////////////////////////////////////
+
+syntax = 'proto2';
+package s5.wire;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Request items
+////////////////////////////////////////////////////////////////////////////////
+
+message ReqIPv4 {
+  required uint32 ip = 1;
+};
+
+message ReqIPv6 {
+  required bytes  ip = 1;
+};
+
+message ReqDNS {
+  required string cname = 1;
+};
+
+message Req {
+  oneof request {
+    ReqIPv4 ipv4 = 1;
+    ReqIPv6 ipv6 = 2;
+    ReqDNS  dns  = 3;
+  };
+  required int32 port = 4;
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Response items
+////////////////////////////////////////////////////////////////////////////////
+
+enum ResStatus {
+  SUCCESS                = 0;
+  GENERAL_FAILURE        = 1;
+  CONNECTION_NOT_ALLOWED = 2;
+  NETWORK_UNREACHABLE    = 3;
+  HOST_UNREACHABLE       = 4;
+  CONNECTOIN_REFUSED     = 5;
+  TTL_EXPIRED            = 6;
+  COMMAND_NOT_SUPPORTED  = 7;
+  ADDRESS_NOT_SUPPORTED  = 8;
+};
+
+message Res {
+  required ResStatus status = 1;
+};
